@@ -30,7 +30,6 @@ let do_main ~port ~ns ~args =
                 let root = Client.find_root cwd cwd in
                 repl_port root) in
     let cmd = main_form ns (Client.splice_args args) in
-    eprintf "%s" cmd;
     Client.main ns cmd port
 
 let command =
