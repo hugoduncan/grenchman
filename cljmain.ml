@@ -16,11 +16,12 @@ let lein_ns = "leiningen.core.main"
 
 let main_form = sprintf "(do
                            (use '%s)
-                           (try (-main \"%s\")
-                             (catch clojure.lang.ExceptionInfo e
-                               (let [c (:exit-code (ex-data e))]
-                                 (when-not (and (number? c) (zero? c))
-                                   (throw e))))))"
+                           (binding [*exit-process?* false]
+                             (try (-main \"%s\")
+                               (catch clojure.lang.ExceptionInfo e
+                                 (let [c (:exit-code (ex-data e))]
+                                   (when-not (and (number? c) (zero? c))
+                                     (throw e)))))))"
 
 let do_main ~port ~ns ~args =
   if ! Sys.interactive then () else
