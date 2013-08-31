@@ -2,15 +2,15 @@ open Async.Std
 open Core.Std
 open Printf
 
-let lein_port_err =
-  "Couldn't read port from ~/.nrepl-port or LEIN_REPL_PORT.\n
+let port_err =
+  "Couldn't read port from .nrepl-port or LEIN_REPL_PORT.\n
 If Leiningen is not running, launch `lein repl :headless' from the
 project directory and try again.\n"
 
 let repl_port root =
   let filename = String.concat
                    ~sep:Filename.dir_sep [root; ".nrepl-port"] in
-  Client.repl_port "LEIN_REPL_PORT" filename lein_port_err
+  Client.repl_port "LEIN_REPL_PORT" filename port_err
 
 let lein_ns = "leiningen.core.main"
 
