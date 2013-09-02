@@ -1,6 +1,5 @@
 open Async.Std
 open Core.Std
-open Printf
 
 let port_err =
   "Couldn't read port from .nrepl-port or LEIN_REPL_PORT.\n
@@ -14,14 +13,15 @@ let repl_port root =
 
 let lein_ns = "leiningen.core.main"
 
-let main_form = sprintf "(do
-                           (use '%s)
-                           (binding [*exit-process?* false]
-                             (try (-main \"%s\")
-                               (catch clojure.lang.ExceptionInfo e
-                                 (let [c (:exit-code (ex-data e))]
-                                   (when-not (and (number? c) (zero? c))
-                                     (throw e)))))))"
+let main_form = 
+  Printf.sprintf "(do
+                    (use '%s)
+                    (binding [*exit-process?* false]
+                      (try (-main \"%s\")
+                      (catch clojure.lang.ExceptionInfo e
+                        (let [c (:exit-code (ex-data e))]
+                          (when-not (and (number? c) (zero? c))
+                            (throw e)))))))"
 
 let do_main ~port ~ns ~args =
   if ! Sys.interactive then () else

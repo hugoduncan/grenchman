@@ -46,7 +46,9 @@ let rec handler (r,w,p) raw resp =
 
   let handle_done resp pending =
     remove_pending pending (List.Assoc.find resp "id");
-    if ! pending = ["init"] then exit 0 in
+    (* Printf.printf "%s\n%!" ("pending: " ^ (String.concat ~sep:"\" \"" (! pending))); *)
+    if ! pending = ["init"] then exit 0
+    in
 
   let rec handle_status resp status =
     match status with
@@ -85,7 +87,7 @@ let repl_port root =
 let initiate port result =
   match result with
     | `Ok input -> Nrepl.new_session "127.0.0.1" port
-      (eval_message input) handler
+                                     [(eval_message input)] handler
     | `Eof -> exit 0
 
 let main root =

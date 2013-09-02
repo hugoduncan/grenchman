@@ -5,6 +5,12 @@ open Printf
 let splice_args args =
   String.concat ~sep:"\" \"" (List.map args String.escaped)
 
+let ns_message ns session =
+  [("session", session);
+   ("op", "eval");
+   ("id", Uuid.to_string (Uuid.create ()));
+   ("code", "(require '" ^ ns ^")")]
+
 let main_message ns form session =
   [("session", session);
    ("op", "eval");
@@ -14,7 +20,7 @@ let main_message ns form session =
 
 let main ns form port =
   let message = main_message ns form in
-  Nrepl.new_session "127.0.0.1" port message Repl.handler;
+  ignore (Nrepl.new_session "127.0.0.1" port [ns_message ns; message] Repl.handler);
   never_returns (Scheduler.go ())
 
 let port_err msg =

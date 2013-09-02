@@ -46,12 +46,15 @@ let rec receive_until_done (r,w,p) handler buffer partial =
 
   let parse_response handler buffer partial resp =
     match resp with
-      | `Eof -> Reader.close r
+      | `Eof -> 
+         debug "Eof seen";
+         Reader.close r
       | `Ok bytes_read -> let just_read = String.sub buffer 0 bytes_read in
                           let partial =
                             handle_responses handler (partial ^ just_read) in
                           receive_until_done (r,w,p) handler buffer partial in
 
+  debug "Receiving message";
   Reader.read r buffer >>= parse_response handler buffer partial
 
 let get_session buffer resp =
@@ -64,14 +67,26 @@ let get_session buffer resp =
             | Some Bencode.String(session) -> session
             | Some _ | None -> no_session ()
 
-let initiate (r,w,p) buffer handler message resp =
-  get_session buffer resp |> message |> send w p;
+
+let rec send_messages (w,p) messages session =
+  debug "Sending message";
+  match messages with
+  | message :: tail ->
+     message session |> send w p;     
+     send_messages (w,p) tail session
+  | [] -> () (* Pervasives.exit 0 *)
+
+
+let initiate (r,w,p) buffer handler messages resp =
+  let session = get_session buffer resp in
+  let _ = Thread.create (send_messages (w,p) messages) session in
   receive_until_done (r,w,p) handler buffer ""
 
-let new_session host port message handler =
+let new_session host port messages handler =
   let buffer = (String.create buffer_size) in
   let pending = ref [] in
   Tcp.connect (Tcp.to_host_and_port host port)
   >>= (fun (_, r, w) ->
     send w pending [("op", "clone"); ("id", "init")];
-    Reader.read r buffer >>= initiate (r,w,pending) buffer handler message)
+    Reader.read r buffer
+    >>= initiate (r,w,pending) buffer handler messages)
