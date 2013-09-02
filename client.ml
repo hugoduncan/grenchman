@@ -6,21 +6,24 @@ let splice_args args =
   String.concat ~sep:"\" \"" (List.map args String.escaped)
 
 let ns_message ns session =
-  [("session", session);
-   ("op", "eval");
-   ("id", Uuid.to_string (Uuid.create ()));
-   ("code", "(require '" ^ ns ^")")]
+  ([("session", session);
+    ("op", "eval");
+    ("id", Uuid.to_string (Uuid.create ()));
+    ("code", "(require '" ^ ns ^")")],
+   {Nrepl.default_actions with Nrepl.value = Nrepl.do_nothing})
 
 let main_message ns form session =
-  [("session", session);
-   ("op", "eval");
-   ("id", Uuid.to_string (Uuid.create ()));
-   ("ns", ns);
-   ("code", form)]
+  ([("session", session);
+    ("op", "eval");
+    ("id", Uuid.to_string (Uuid.create ()));
+    ("ns", ns);
+    ("code", form)],
+   Nrepl.default_actions)
 
 let main ns form port =
   let message = main_message ns form in
-  ignore (Nrepl.new_session "127.0.0.1" port [ns_message ns; message] Repl.handler);
+  ignore (Nrepl.new_session "127.0.0.1" port [ns_message ns; message]
+                            Repl.handler);
   never_returns (Scheduler.go ())
 
 let port_err msg =

@@ -1,6 +1,27 @@
 open Async.Std
 open Core.Std
 
+type msg_actions =
+    { out : string -> unit;
+      err : string -> unit;
+      ex : string -> unit;
+      value : string -> unit;
+    }
+
+let do_nothing _ = ()
+
+let default_actions =
+    { out = Printf.printf "%s%!";
+      err = eprintf "%s%!";
+      ex = eprintf "%s%!";
+      value = do_nothing;
+    }
+
+let quiet_actions =
+  { default_actions with out = do_nothing;
+                         value = do_nothing;
+  }
+
 let buffer_size = (1024 * 16)
 
 let debug out =
@@ -13,13 +34,13 @@ let rec convert_message message converted =
     | (k, v) :: tl -> convert_message tl ((k, Bencode.String(v)) :: converted)
     | [] -> converted
 
-let send w pending message =
+let send w pending (message,actions) =
   let converted = Bencode.Dict(convert_message message []) in
   let out = Bencode.marshal converted in
   debug ("-> " ^ out);
   Writer.write w out;
   match List.Assoc.find message "id" with
-    | Some id -> pending := id :: (! pending)
+    | Some id -> Hashtbl.replace pending ~key:id ~data:actions
     | None -> Printf.eprintf "  Sending message without id!\n%!"
 
 let rec receive_until_done (r,w,p) handler buffer partial =
@@ -84,9 +105,9 @@ let initiate (r,w,p) buffer handler messages resp =
 
 let new_session host port messages handler =
   let buffer = (String.create buffer_size) in
-  let pending = ref [] in
+  let pending = String.Table.create () in
   Tcp.connect (Tcp.to_host_and_port host port)
   >>= (fun (_, r, w) ->
-    send w pending [("op", "clone"); ("id", "init")];
+    send w pending ([("op", "clone"); ("id", "init")], quiet_actions);
     Reader.read r buffer
     >>= initiate (r,w,pending) buffer handler messages)
