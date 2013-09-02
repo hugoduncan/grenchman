@@ -32,7 +32,7 @@ let main_form = sprintf "(binding [*cwd* \"%s\", *exit-process?* false]
                                    (throw e))))))"
 
 let lein_main cwd root args =
-  let port = Int.of_string (lein_repl_port ()) in
+  let port = lein_repl_port () in
   Client.main lein_ns (main_form root cwd (Client.splice_args args)) port
 
 let usage = "usage: grench TASK [ARGS]...
