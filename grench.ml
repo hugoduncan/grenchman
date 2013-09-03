@@ -34,7 +34,9 @@ let main_form = sprintf "(binding [*cwd* \"%s\", *exit-process?* false]
                                  (when-not (and (number? c) (zero? c))
                                    (throw e))))))"
 
-let lein_main cwd root args =
+let lein_main args =
+  let cwd = Sys.getcwd () in
+  let root = Client.find_root cwd cwd in
   let port = lein_repl_port () in
   Client.main lein_ns (main_form root cwd (Client.splice_args args)) port
 
@@ -45,15 +47,11 @@ See `grench help' to list tasks."
 
 let () =
   if ! Sys.interactive then () else
-    let cwd = Sys.getcwd () in
-    let root = Client.find_root cwd cwd in
     match Sys.argv |> Array.to_list |> List.tl with
       | None | Some ["--grench-help"] -> printf "%s\n%!" usage
       | Some ["--version"] | Some ["-v"] -> printf "Grenchman 0.1.0\n%!"
       | Some ["--leiningen-version"] | Some ["--lein-version"] ->
-        lein_main root cwd ["version"]
-      | Some ["repl"] ->
-         lein_main root cwd ["run"; "-m"; "clojure.main/main"; "-r"]
-      | Some ("main" :: tl) ->
-         Cljmain.cljmain root cwd tl
-      | Some args -> lein_main root cwd args
+        lein_main ["version"]
+      | Some ["repl"] -> lein_main ["run"; "-m"; "clojure.main/main"; "-r"]
+      | Some ("main" :: tl) -> Cljmain.cljmain tl
+      | Some args -> lein_main args

@@ -132,7 +132,7 @@ let process_args args options =
   | None -> (options, args)
 
 (* Run a clojure main *)
-let cljmain root cwd args =
+let cljmain args =
   let (options,args) =
     process_args
       args
