@@ -6,12 +6,8 @@ let port_err =
 If Leiningen is not running, launch `lein repl :headless' from the
 project directory and try again.\n"
 
-let rec repl_port port_file jarpath repl_ns =
-  let filename = match port_file with
-    | Some s -> s
-    | None -> let cwd = Sys.getcwd () in
-              let root = Client.find_root cwd cwd in
-              String.concat ~sep:Filename.dir_sep [root; ".nrepl-port"] in
+(* Launch an nREPL server based on a jar file *)
+let rec launch filename jarpath repl_ns =
   let javapath () = match Sys.getenv "CLJMAIN_JAVA" with
     | Some s -> s
     | None -> "java" in
@@ -32,16 +28,25 @@ let rec repl_port port_file jarpath repl_ns =
                             Printf.eprintf "%s\n%!" "Repl start timed out.";
                             Pervasives.exit 1
                           end in
+  Printf.printf "launch %s %s %s\n%!" (javapath ()) jarpath (main_ns ());
+  let pid = Jarlaunch.launch
+              jarpath ~java:(javapath ()) ~main_ns:(main_ns ())
+              ~args:[|"--port-file"; filename |] in
+  Nrepl.debug ("Started " ^ (string_of_int pid));
+  wait_for filename 20;
+;;
+
+let rec repl_port port_file jarpath repl_ns =
+  let filename = match port_file with
+    | Some s -> s
+    | None -> let cwd = Sys.getcwd () in
+              let root = Client.find_root cwd cwd in
+              String.concat ~sep:Filename.dir_sep [root; ".nrepl-port"] in
   match Client.repl_port "CLJMAIN_PORT" filename with
   | Some p -> p
   | None -> match (jarpath,port_file) with
             | (Some jp, Some pf) ->
-               Printf.printf "launch %s %s %s\n%!" (javapath ()) jp (main_ns ());
-               let pid = Jarlaunch.launch
-                           jp ~java:(javapath ()) ~main_ns:(main_ns ())
-                           ~args:[|"--port-file"; pf |] in
-               Printf.eprintf "Started %d\n%!" pid;
-               wait_for pf 20;
+               launch pf jp repl_ns;
                repl_port port_file None None
             | _ -> Printf.eprintf "%s\n%!"
                      ("Could not find repl to connect to, and jarpath and " ^
@@ -120,7 +125,7 @@ let optionf options (found, args, in_option) e =
 
 let process_args args options =
   let (args,others) = List.fold args ~init:([],None) ~f:splitf in
-  let (options,args,_) = 
+  let (options,args,_) =
     List.fold args ~init:([],[],None) ~f:(optionf options) in
   match others with
   | Some l -> (options,List.append args l)
@@ -128,7 +133,7 @@ let process_args args options =
 
 (* Run a clojure main *)
 let cljmain root cwd args =
-  let (options,args) = 
+  let (options,args) =
     process_args
       args
       [("-p", "--port", "Port to connect to", false);
