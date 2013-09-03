@@ -11,15 +11,18 @@ type msg_actions =
 let do_nothing _ = ()
 
 let default_actions =
-    { out = Printf.printf "%s%!";
-      err = eprintf "%s%!";
-      ex = eprintf "%s%!";
+    { out = Printf.printf "%s\n%!";
+      err = Printf.eprintf "%s\n%!";
+      ex = Printf.eprintf "%s\n%!";
       value = do_nothing;
     }
 
 let quiet_actions =
   { default_actions with out = do_nothing;
-                         value = do_nothing;
+  }
+
+let print_all =
+  { default_actions with value = Printf.printf "%s\n%!";
   }
 
 let buffer_size = (1024 * 16)
@@ -95,7 +98,7 @@ let rec send_messages (w,p) messages session =
   | message :: tail ->
      message session |> send w p;     
      send_messages (w,p) tail session
-  | [] -> () (* Pervasives.exit 0 *)
+  | [] -> ()
 
 
 let initiate (r,w,p) buffer handler messages resp =
