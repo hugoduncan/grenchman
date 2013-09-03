@@ -100,10 +100,15 @@ let rec send_messages (w,p) messages session =
      send_messages (w,p) tail session
   | [] -> ()
 
+let send_all_messages (w,p) messages session =
+  let f ivar =
+    Ivar.fill ivar (send_messages (w,p) messages session)
+  in
+  Deferred.create f
 
 let initiate (r,w,p) buffer handler messages resp =
   let session = get_session buffer resp in
-  let _ = Thread.create (send_messages (w,p) messages) session in
+  send_all_messages (w,p) messages session;
   receive_until_done (r,w,p) handler buffer ""
 
 let new_session host port messages handler =
