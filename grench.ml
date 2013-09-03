@@ -54,4 +54,6 @@ let () =
         lein_main root cwd ["version"]
       | Some ["repl"] ->
          lein_main root cwd ["run"; "-m"; "clojure.main/main"; "-r"]
+      | Some ("main" :: tl) ->
+         Cljmain.cljmain root cwd tl
       | Some args -> lein_main root cwd args
