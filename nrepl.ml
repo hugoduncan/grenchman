@@ -97,22 +97,26 @@ let rec send_messages (w,p) messages session =
      send_messages (w,p) tail session
   | [] -> ()
 
+(* Write a list of messages to the nrepl server *)
 let send_all_messages (w,p) messages session =
   let f ivar =
     Ivar.fill ivar (send_messages (w,p) messages session)
   in
   Deferred.create f
 
-let initiate (r,w,p) buffer handler messages resp =
-  let session = get_session buffer resp in
-  send_all_messages (w,p) messages session;
-  receive_until_done (r,w,p) handler buffer ""
+(* Returns a deferred tuple with a session id *)
+let initiate_session (s,r,w,p) buffer =
+  Reader.read r buffer
+  >>= fun resp -> return (s,r,w,p,get_session buffer resp)
 
+(* Create a new session *)
 let new_session host port messages handler =
   let buffer = (String.create buffer_size) in
   let pending = String.Table.create () in
   Tcp.connect (Tcp.to_host_and_port host port)
-  >>= (fun (_, r, w) ->
+  >>= (fun (s, r, w) ->
     send w pending ([("op", "clone"); ("id", "init")], quiet_actions);
-    Reader.read r buffer
-    >>= initiate (r,w,pending) buffer handler messages)
+    initiate_session (s,r,w,pending) buffer
+    >>= (fun (_, r, w, p, session) ->
+         ignore (send_all_messages (w,p) messages session);
+         receive_until_done (r,w,p) handler buffer ""))
