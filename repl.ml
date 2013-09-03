@@ -27,17 +27,17 @@ let send_input resp (r,w,p) result =
     | Some Bencode.String(session) -> (match result with
         | `Ok input -> Nrepl.send w p (stdin_message input session)
         (* TODO: only exit on EOF in a top-level input request *)
-        | `Eof -> 
+        | `Eof ->
            Nrepl.debug "Eof seen";
            exit 0)
     | None | Some _ -> eprintf "  No session in need-input."
 
 let rec handler (r,w,p) raw resp =
   let handle actions k v = match (k, v) with
-    | ("out", v) -> actions.Nrepl.out v
-    | ("err", v) -> actions.Nrepl.err v
-    | ("ex", v) | ("root-ex", v) -> actions.Nrepl.ex v
-    | ("value", v) -> actions.Nrepl.value v
+    | ("out", out) -> actions.Nrepl.out out
+    | ("err", out) -> actions.Nrepl.err out
+    | ("ex", out) | ("root-ex", out) -> actions.Nrepl.ex out
+    | ("value", value) -> actions.Nrepl.value value
     | ("session", _) | ("id", _) | ("ns", _) -> ()
     | (k, v) -> printf "  Unknown response: %s %s\n%!" k v in
 
@@ -45,19 +45,12 @@ let rec handler (r,w,p) raw resp =
     Nrepl.debug ("-p " ^ String.concat ~sep:" " (Hashtbl.keys pending));
     match id with
       | Some Bencode.String(id) -> if Hashtbl.mem pending id then
-                                     Hashtbl.remove pending id;
-                                     ()
+                                     Hashtbl.remove pending id
       | None | Some _ -> eprintf "  Unknown message id.\n%!" in
 
   let handle_done resp pending =
     remove_pending pending (List.Assoc.find resp "id");
-    (* Printf.printf "%s\n%!" ("pending: " ^ (String.concat ~sep:"\" \"" (! pending))); *)
-    if Hashtbl.keys pending = ["init"] then 
-      begin
-        Nrepl.debug "All messages processed";
-        exit 0
-      end
-    in
+    if Hashtbl.keys pending = ["init"] then exit 0 in
 
   let rec execute_actions actions resp =
     match resp with
@@ -85,15 +78,16 @@ let rec handler (r,w,p) raw resp =
     match status with
       (* TODO: handle messages with multiple status fields by recuring on tl *)
       | Bencode.String "done" :: tl -> handle_done resp p
-      | Bencode.String "eval-error" :: tl -> 
+      | Bencode.String "eval-error" :: tl ->
+         Printf.eprintf "%s\n%!" "eval-error";
          execute_actions Nrepl.print_all resp;
-         Printf.eprintf "%s %s\n%!" "eval-error" raw;
+         Nrepl.debug raw;
          exit 1
       | Bencode.String "unknown-session" :: tl ->
          eprintf "Unknown session.\n"; exit 1
-      | Bencode.String "need-input" :: tl -> 
+      | Bencode.String "need-input" :: tl ->
          ignore (Reader.read_line rdr >>| send_input resp (r,w,p)); ()
-      | x -> printf "  Unknown status: %s\n%!" 
+      | x -> printf "  Unknown status: %s\n%!"
                     (Bencode.marshal (Bencode.List(x))) in
 
   (* currently if it's a status message we ignore every other field *)
