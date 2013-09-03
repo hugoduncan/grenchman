@@ -46,10 +46,9 @@ let () =
     let root = Client.find_root cwd cwd in
     match Sys.argv |> Array.to_list |> List.tl with
       | None | Some ["--grench-help"] -> printf "%s\n%!" usage
+      | Some ["--version"] | Some ["-v"] -> printf "Grenchman 0.1.0\n%!"
       | Some ["--leiningen-version"] | Some ["--lein-version"] ->
         lein_main root cwd ["version"]
-      | Some ["--version"] | Some ["version"] | Some ["-v"] ->
-        printf "Grenchman 0.1.0\n%!"
       | Some ["repl"] ->
          lein_main root cwd ["run"; "-m"; "clojure.main/main"; "-r"]
       | Some args -> lein_main root cwd args
