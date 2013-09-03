@@ -18,12 +18,10 @@ let default_actions =
     }
 
 let quiet_actions =
-  { default_actions with out = do_nothing;
-  }
+  { default_actions with out = do_nothing; }
 
 let print_all =
-  { default_actions with value = Printf.printf "%s\n%!";
-  }
+  { default_actions with value = Printf.printf "%s\n%!"; }
 
 let buffer_size = (1024 * 16)
 
@@ -91,12 +89,11 @@ let get_session buffer resp =
             | Some Bencode.String(session) -> session
             | Some _ | None -> no_session ()
 
-
 let rec send_messages (w,p) messages session =
   debug "Sending message";
   match messages with
   | message :: tail ->
-     message session |> send w p;     
+     message session |> send w p;
      send_messages (w,p) tail session
   | [] -> ()
 
