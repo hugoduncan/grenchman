@@ -6,7 +6,7 @@ let splice_args args =
   String.concat ~sep:"\" \"" (List.map args String.escaped)
 
 (* A message to require the main names - no ns field sent *)
-let ns_message ns session =
+let require ns session =
   ([("session", session);
     ("op", "eval");
     ("id", Uuid.to_string (Uuid.create ()));
@@ -15,7 +15,7 @@ let ns_message ns session =
 
 (* A message to run the main - ns field sent, so namespace
    has to have been previously required. *)
-let main_message ns form session =
+let eval ns form session =
   ([("session", session);
     ("op", "eval");
     ("id", Uuid.to_string (Uuid.create ()));
@@ -25,8 +25,8 @@ let main_message ns form session =
 
 let main ns form port =
   ignore (Nrepl.new_session "127.0.0.1" port
-                            [ns_message ns;
-                             main_message ns form]
+                            [require ns;
+                             eval ns form]
                             Repl.handler);
   never_returns (Scheduler.go ())
 
